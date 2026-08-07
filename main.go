@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sakshamgupta/flatcar-butane-transpiler/pkg/cloudconfig"
-	"github.com/sakshamgupta/flatcar-butane-transpiler/pkg/transpiler"
+	"github.com/Saksham-Gupta-GH/flatcar-butane-transpiler/pkg/cloudconfig"
+	"github.com/Saksham-Gupta-GH/flatcar-butane-transpiler/pkg/transpiler"
 	"gopkg.in/yaml.v3"
 )
 

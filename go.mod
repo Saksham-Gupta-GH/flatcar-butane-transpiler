@@ -1,4 +1,4 @@
-module github.com/sakshamgupta/flatcar-butane-transpiler
+module github.com/Saksham-Gupta-GH/flatcar-butane-transpiler
 
 go 1.22
 
