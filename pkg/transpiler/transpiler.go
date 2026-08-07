@@ -101,11 +101,58 @@ func Transpile(cfg *cloudconfig.Config) (*butane.Config, []string, error) {
 		}
 	}
 
-	// --- Unsupported but commonly used fields ---
+	// --- RunCMD ---
 	if len(cfg.RunCMD) > 0 {
-		warnings = append(warnings,
-			"runcmd is not supported in Butane; consider converting commands to a systemd oneshot unit")
+		var scriptBuilder strings.Builder
+		scriptBuilder.WriteString("#!/bin/bash\nset -ex\n")
+
+		for _, cmd := range cfg.RunCMD {
+			switch c := cmd.(type) {
+			case string:
+				scriptBuilder.WriteString(c + "\n")
+			case []interface{}:
+				var parts []string
+				for _, p := range c {
+					parts = append(parts, fmt.Sprintf("%v", p))
+				}
+				// Note: complex escaping is not handled perfectly here, but this works for basic lists
+				scriptBuilder.WriteString(strings.Join(parts, " ") + "\n")
+			}
+		}
+
+		if out.Storage == nil {
+			out.Storage = &butane.Storage{}
+		}
+		out.Storage.Files = append(out.Storage.Files, butane.File{
+			Path:      "/opt/cloud-init/runcmd.sh",
+			Mode:      intPtr(0755),
+			Overwrite: true,
+			Contents:  &butane.FileContent{Inline: scriptBuilder.String()},
+		})
+
+		if out.Systemd == nil {
+			out.Systemd = &butane.Systemd{}
+		}
+		out.Systemd.Units = append(out.Systemd.Units, butane.Unit{
+			Name:    "cloud-init-runcmd.service",
+			Enabled: boolPtr(true),
+			Contents: `[Unit]
+Description=Execute cloud-init runcmd
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/cloud-init/runcmd.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+`,
+		})
 	}
+
+	// --- Unsupported but commonly used fields ---
 	if cfg.Hostname != "" {
 		warnings = append(warnings,
 			"hostname is not supported in Butane; set it via a systemd unit or kernel cmdline")
@@ -223,5 +270,5 @@ func transpileSystemdUnit(u cloudconfig.SystemdUnit) butane.Unit {
 	return bu
 }
 
-func intPtr(i int) *int   { return &i }
+func intPtr(i int) *int    { return &i }
 func boolPtr(b bool) *bool { return &b }

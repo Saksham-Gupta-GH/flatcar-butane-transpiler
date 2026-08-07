@@ -171,18 +171,34 @@ func TestTranspileVariantVersion(t *testing.T) {
 	}
 }
 
-// TestTranspileRunCMDWarning verifies that unsupported runcmd fields produce
-// a warning and do not cause an error.
-func TestTranspileRunCMDWarning(t *testing.T) {
+// TestTranspileRunCMD verifies that runcmd fields produce a systemd oneshot unit and a script.
+func TestTranspileRunCMD(t *testing.T) {
 	cfg := &cloudconfig.Config{
-		RunCMD: []interface{}{"echo hello"},
+		RunCMD: []interface{}{
+			"echo hello",
+			[]interface{}{"ls", "-l", "/"},
+		},
 	}
-	_, warnings, err := transpiler.Transpile(cfg)
+	out, warnings, err := transpiler.Transpile(cfg)
 	if err != nil {
 		t.Fatalf("expected no error for runcmd, got: %v", err)
 	}
-	if len(warnings) == 0 {
-		t.Error("expected a warning for runcmd, got none")
+	if len(warnings) != 0 {
+		t.Errorf("expected no warning for runcmd, got %v", warnings)
+	}
+
+	if out.Storage == nil || len(out.Storage.Files) == 0 {
+		t.Fatal("expected Storage block with runcmd script in Butane config")
+	}
+	if out.Storage.Files[0].Path != "/opt/cloud-init/runcmd.sh" {
+		t.Errorf("expected script at /opt/cloud-init/runcmd.sh, got %q", out.Storage.Files[0].Path)
+	}
+
+	if out.Systemd == nil || len(out.Systemd.Units) == 0 {
+		t.Fatal("expected Systemd block with runcmd service in Butane config")
+	}
+	if out.Systemd.Units[0].Name != "cloud-init-runcmd.service" {
+		t.Errorf("expected service cloud-init-runcmd.service, got %q", out.Systemd.Units[0].Name)
 	}
 }
 
@@ -210,3 +226,71 @@ func TestTranspileAppendFile(t *testing.T) {
 		t.Error("expected Append section to be set for append file")
 	}
 }
+
+// TestTranspileEdgeCases verifies various warnings and error conditions
+func TestTranspileEdgeCases(t *testing.T) {
+	// 1. Hostname warning
+	cfgHost := &cloudconfig.Config{Hostname: "my-node-1"}
+	_, warns, _ := transpiler.Transpile(cfgHost)
+	if len(warns) == 0 || warns[0] != "hostname is not supported in Butane; set it via a systemd unit or kernel cmdline" {
+		t.Errorf("expected hostname warning, got %v", warns)
+	}
+
+	// 2. User Sudo warning
+	cfgSudo := &cloudconfig.Config{
+		Users: []cloudconfig.User{{Name: "test", Sudo: "ALL=(ALL) NOPASSWD:ALL"}},
+	}
+	_, warns, _ = transpiler.Transpile(cfgSudo)
+	if len(warns) == 0 || warns[0] != "user \"test\": sudo field is not supported in Butane; configure sudo via a write_files entry for /etc/sudoers.d/" {
+		t.Errorf("expected user sudo warning, got %v", warns)
+	}
+
+	// 3. Group Members warning
+	cfgMembers := &cloudconfig.Config{
+		Groups: []cloudconfig.Group{{Name: "docker", Members: []string{"core"}}},
+	}
+	_, warns, _ = transpiler.Transpile(cfgMembers)
+	if len(warns) == 0 || warns[0] != "group \"docker\": members field is not supported in Butane; add users to groups via the user's groups field" {
+		t.Errorf("expected group members warning, got %v", warns)
+	}
+
+	// 4. File Base64 encoding
+	cfgB64 := &cloudconfig.Config{
+		WriteFiles: []cloudconfig.File{{Path: "/test", Content: "aGVsbG8=", Encoding: "b64"}},
+	}
+	outB64, warns, _ := transpiler.Transpile(cfgB64)
+	if len(warns) == 0 || warns[0] != "file \"/test\": base64 encoding detected; converting to Butane data URL format" {
+		t.Errorf("expected base64 warning, got %v", warns)
+	}
+	if outB64.Storage.Files[0].Contents.Inline != "data:text/plain;charset=utf-8;base64,aGVsbG8=" {
+		t.Errorf("expected data URL, got %v", outB64.Storage.Files[0].Contents.Inline)
+	}
+
+	// 5. Invalid file permissions
+	cfgPerm := &cloudconfig.Config{
+		WriteFiles: []cloudconfig.File{{Path: "/test", Permissions: "invalid"}},
+	}
+	_, _, err := transpiler.Transpile(cfgPerm)
+	if err == nil {
+		t.Error("expected error for invalid permissions, got nil")
+	}
+
+	// 6. CA Certs
+	cfgCerts := &cloudconfig.Config{
+		CACerts: cloudconfig.CACerts{Trusted: []string{"CERT_DATA"}},
+	}
+	outCerts, _, _ := transpiler.Transpile(cfgCerts)
+	if outCerts.Storage.Files[0].Path != "/etc/ssl/certs/cloud-config-ca-0.pem" {
+		t.Errorf("expected CA cert path, got %v", outCerts.Storage.Files[0].Path)
+	}
+
+	// 7. Group Gid
+	cfgGid := &cloudconfig.Config{
+		Groups: []cloudconfig.Group{{Name: "testg", Gid: 1000}},
+	}
+	outGid, _, _ := transpiler.Transpile(cfgGid)
+	if *outGid.Passwd.Groups[0].Gid != 1000 {
+		t.Errorf("expected Gid 1000, got %v", *outGid.Passwd.Groups[0].Gid)
+	}
+}
+

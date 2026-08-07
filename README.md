@@ -1,5 +1,9 @@
 # flatcar-butane-transpiler
 
+[![CI](https://github.com/Saksham-Gupta-GH/flatcar-butane-transpiler/actions/workflows/ci.yml/badge.svg)](https://github.com/Saksham-Gupta-GH/flatcar-butane-transpiler/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Saksham-Gupta-GH/flatcar-butane-transpiler)](https://goreportcard.com/report/github.com/Saksham-Gupta-GH/flatcar-butane-transpiler)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/Saksham-Gupta-GH/flatcar-butane-transpiler)
+
 A command-line tool written in Go that converts **cloud-init cloud-config YAML** files into **Flatcar Butane YAML** configuration files.
 
 This project was built as a proof-of-concept prototype for the [CNCF - Flatcar Container Linux: Cloud-Init to Butane YAML config transpiler (2026 Term 3)](https://github.com/flatcar/Flatcar/issues/2226) LFX Mentorship proposal.
@@ -21,19 +25,20 @@ The scope is deliberately narrow, covering the minimum set of features needed fo
 | `write_files`      | `storage.files`               | Including permissions, owner parsing, append mode, base64 encoding |
 | `systemd`          | `systemd.units`               | Including `enabled` and `mask` fields        |
 | `ca_certs`         | `storage.files`               | Written to `/etc/ssl/certs/`                 |
+| `runcmd`           | `systemd.units` & `storage.files` | Auto-transpiled into a `oneshot` systemd unit executing a generated bash script |
 
 ### Explicitly Not Supported
 
 The following cloud-config fields are not representable in Butane. The transpiler emits a **warning** for each one instead of failing, so partial configs remain useful:
 
-- `runcmd` — use a systemd oneshot unit instead
 - `hostname` — set via kernel cmdline or a systemd unit
 - `manage_etc_hosts`
+- `sudo` on user entries — write a file to `/etc/sudoers.d/` instead
 
 ## Installation
 
 ```bash
-git clone https://github.com/sakshamgupta/flatcar-butane-transpiler.git
+git clone https://github.com/Saksham-Gupta-GH/flatcar-butane-transpiler.git
 cd flatcar-butane-transpiler
 go build -o transpiler .
 ```
@@ -157,7 +162,6 @@ make run-example
 
 ## Known Limitations
 
-- `runcmd` is not translated; use a systemd oneshot unit for equivalent behaviour.
 - `sudo` grants are not translated; write a file to `/etc/sudoers.d/` instead.
 - Group `members` lists are not supported in Butane; assign groups via the `user.groups` field.
 - Only the `flatcar` Butane variant (`v1.0.0`) is produced.

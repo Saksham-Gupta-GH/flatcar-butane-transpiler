@@ -5,14 +5,14 @@ package cloudconfig
 
 // Config is the top-level cloud-config document.
 type Config struct {
-	Users           []User           `yaml:"users,omitempty"`
-	Groups          []Group          `yaml:"groups,omitempty"`
-	WriteFiles      []File           `yaml:"write_files,omitempty"`
-	RunCMD          []interface{}    `yaml:"runcmd,omitempty"`
-	SystemdUnits    []SystemdUnit    `yaml:"systemd,omitempty"`
-	CACerts         CACerts          `yaml:"ca_certs,omitempty"`
-	Hostname        string           `yaml:"hostname,omitempty"`
-	ManageEtcHosts  string           `yaml:"manage_etc_hosts,omitempty"`
+	Users          []User        `yaml:"users,omitempty"`
+	Groups         []Group       `yaml:"groups,omitempty"`
+	WriteFiles     []File        `yaml:"write_files,omitempty"`
+	RunCMD         []interface{} `yaml:"runcmd,omitempty"`
+	SystemdUnits   []SystemdUnit `yaml:"systemd,omitempty"`
+	CACerts        CACerts       `yaml:"ca_certs,omitempty"`
+	Hostname       string        `yaml:"hostname,omitempty"`
+	ManageEtcHosts string        `yaml:"manage_etc_hosts,omitempty"`
 }
 
 // User represents a user entry in cloud-config.

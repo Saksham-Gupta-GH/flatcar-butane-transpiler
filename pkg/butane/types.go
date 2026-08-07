@@ -4,11 +4,11 @@ package butane
 
 // Config is the top-level Butane document.
 type Config struct {
-	Variant  string   `yaml:"variant"`
-	Version  string   `yaml:"version"`
-	Passwd   *Passwd  `yaml:"passwd,omitempty"`
-	Storage  *Storage `yaml:"storage,omitempty"`
-	Systemd  *Systemd `yaml:"systemd,omitempty"`
+	Variant string   `yaml:"variant"`
+	Version string   `yaml:"version"`
+	Passwd  *Passwd  `yaml:"passwd,omitempty"`
+	Storage *Storage `yaml:"storage,omitempty"`
+	Systemd *Systemd `yaml:"systemd,omitempty"`
 }
 
 // Passwd holds user and group definitions in Butane.
@@ -46,13 +46,13 @@ type Storage struct {
 
 // File represents a file entry in Butane storage.
 type File struct {
-	Path     string      `yaml:"path"`
-	Mode     *int        `yaml:"mode,omitempty"`
-	Overwrite bool       `yaml:"overwrite,omitempty"`
-	Contents *FileContent `yaml:"contents,omitempty"`
-	User     *FileUser   `yaml:"user,omitempty"`
-	Group    *FileGroup  `yaml:"group,omitempty"`
-	Append   []FileAppend `yaml:"append,omitempty"`
+	Path      string       `yaml:"path"`
+	Mode      *int         `yaml:"mode,omitempty"`
+	Overwrite bool         `yaml:"overwrite,omitempty"`
+	Contents  *FileContent `yaml:"contents,omitempty"`
+	User      *FileUser    `yaml:"user,omitempty"`
+	Group     *FileGroup   `yaml:"group,omitempty"`
+	Append    []FileAppend `yaml:"append,omitempty"`
 }
 
 // FileContent holds the content specification for a Butane file.
