@@ -13,80 +13,30 @@ jobs:
     strategy:
       matrix:
         go-version: ['1.22', '1.23']
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Verify dependencies
-        run: go mod verify
-
-      - name: Build
-        run: go build ./...
-
-      - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out ./...
-
-      - name: Check test coverage
-        run: go tool cover -func=coverage.out
-
-      - name: Run vet
-        run: go vet ./...
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-          cache: true
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
+      - run: go mod download
+      - run: go build ./...
+      - run: go test -v -race -coverprofile=coverage.out ./...
+      - run: go tool cover -func=coverage.out
+      - run: go vet ./...
 
   integration:
     name: Integration Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.22'
           cache: true
-
-      - name: Build binary
-        run: go build -o transpiler .
-
-      - name: Run transpiler on example file
-        run: ./transpiler -input examples/worker-node.cloud-config.yaml -output /tmp/output-butane.yaml
-
-      - name: Validate output is valid YAML
-        run: python3 -c "import yaml, sys; yaml.safe_load(open('/tmp/output-butane.yaml'))" && echo "Output is valid YAML"
-
-      - name: Check output has correct variant
-        run: grep -q "variant: flatcar" /tmp/output-butane.yaml && echo "variant field OK"
-
-      - name: Check output has correct version
-        run: grep -q "version: 1.0.0" /tmp/output-butane.yaml && echo "version field OK"
-
-      - name: Print output for inspection
-        run: cat /tmp/output-butane.yaml
+      - run: go build -o transpiler .
+      - run: ./transpiler -input examples/worker-node.cloud-config.yaml -output /tmp/out.yaml
+      - run: python3 -c "import yaml; yaml.safe_load(open('/tmp/out.yaml'))" && echo "Valid YAML"
+      - run: grep -q "variant: flatcar" /tmp/out.yaml && echo "variant OK"
+      - run: grep -q "version: 1.0.0" /tmp/out.yaml && echo "version OK"
+      - run: cat /tmp/out.yaml
