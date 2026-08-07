@@ -1,0 +1,56 @@
+#cloud-config
+
+# Example: ClusterAPI worker node provisioning
+# This cloud-config demonstrates the features supported by the transpiler:
+# users, groups, write_files, and systemd units.
+
+users:
+  - name: core
+    groups: sudo, docker
+    shell: /bin/bash
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC0example+key== user@example.com
+    lock_passwd: true
+
+  - name: svc-account
+    system: true
+    no_create_home: true
+    shell: /sbin/nologin
+    gecos: Service Account
+
+groups:
+  - name: docker
+    system: true
+
+write_files:
+  - path: /etc/myapp/config.toml
+    permissions: "0644"
+    owner: root:root
+    content: |
+      [server]
+      port = 8080
+      log_level = "info"
+
+  - path: /etc/ssh/sshd_config.d/99-hardening.conf
+    permissions: "0600"
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      X11Forwarding no
+
+systemd:
+  - name: myapp.service
+    enabled: true
+    content: |
+      [Unit]
+      Description=My Application
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=svc-account
+      ExecStart=/usr/bin/myapp --config /etc/myapp/config.toml
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
