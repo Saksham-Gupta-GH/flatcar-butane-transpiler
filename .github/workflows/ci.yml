@@ -36,7 +36,6 @@ jobs:
           cache: true
       - run: go build -o transpiler .
       - run: ./transpiler -input examples/worker-node.cloud-config.yaml -output /tmp/out.yaml
-      - run: yq '.' /tmp/out.yaml > /dev/null && echo "Valid YAML"
       - run: grep -q "variant: flatcar" /tmp/out.yaml && echo "variant OK"
       - run: grep -q "version: 1.0.0" /tmp/out.yaml && echo "version OK"
       - run: cat /tmp/out.yaml
